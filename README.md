@@ -8,6 +8,10 @@
 ## Directory Structure
 * ```./src/``` contains all the source code file for both client and server.
 
+## Dependency
+* [Ncurses](https://invisible-island.net/ncurses/)
+* [Boost.Asio](https://www.boost.org/doc/libs/1_82_0/doc/html/boost_asio.html).
+
 ## Command Sequence: Steps to build and run the program.
 1. ```$ make```
 2. ```$ cd ./bin/```
