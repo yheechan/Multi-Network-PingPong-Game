@@ -112,27 +112,6 @@ public:
 	void
 	recur_send ()
 	{
-		/*
-		auto self(shared_from_this());
-		async_write(
-			socket_,
-			buffer(send_pkt, sizeof(pkt_t)),
-			[this, self](boost::system::error_code ec, size_t transferred_bytes)
-			{
-				if (ec)
-				{
-					return fail(ec, "async_write: send data");
-				}
-				else
-				{
-					cout << "send recur: ";
-					cout << send_pkt->p1_y << endl;
-					// this_thread::sleep_for(std::chrono::milliseconds(100));
-					// recur_send();
-				}
-			}
-		);
-		*/
 		socket_.write_some(buffer(send_pkt, sizeof(pkt_t)));
 		cout << "send recur: ";
 		cout << send_pkt->p1_y << endl;
@@ -143,25 +122,6 @@ public:
 	void
 	recur_recv ()
 	{
-		/*
-		auto self(shared_from_this());
-		async_read(
-			socket_,
-			buffer(&key_in, sizeof(key_in)),
-			[this, self](boost::system::error_code ec, size_t transferred_bytes)
-			{
-				if (ec)
-				{
-					return fail(ec, "async_write: send data");
-				}
-				else
-				{
-					cout << static_cast<int>(key_in) << endl;
-					update_pos(key_in);
-				}
-			}
-		);
-		*/
 		socket_.read_some(buffer(&key_in, sizeof(key_in)));
 		cout << static_cast<int>(key_in) << endl;
 		update_pos(key_in);
@@ -183,26 +143,6 @@ public:
 			break;
 	}
 
-	/*
-	auto self(shared_from_this());
-	async_write(
-		socket_,
-		buffer(send_pkt, sizeof(pkt_t)),
-		[this, self](boost::system::error_code ec, size_t transferred_bytes)
-		{
-			if (ec)
-			{
-				return fail(ec, "async_write: send updated data");
-			}
-			else
-			{
-				cout << "send update: ";
-				cout << send_pkt->p1_y << endl;
-				recur_recv();
-			}
-		}
-	);
-	*/
 	socket_.write_some(buffer(send_pkt, sizeof(pkt_t)));
 	cout << "send update: ";
 	cout << send_pkt->p1_y << endl;

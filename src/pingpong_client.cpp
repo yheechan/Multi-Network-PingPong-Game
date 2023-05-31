@@ -96,26 +96,6 @@ public:
 	recur_recv ()
 	{
 		memset(recv_pkt, 0, sizeof(pkt_t));
-		/*
-		auto self(shared_from_this());
-		async_read(
-			tcp_socket_,
-			buffer(recv_pkt, sizeof(pkt_t)),
-			[this, self](boost::system::error_code ec, size_t transferred_bytes)
-			{
-				if (ec)
-				{
-					return fail(ec, "async_read: recv data");
-				}
-				else
-				{
-					// cout << recv_pkt->p1_y << endl;
-					refresh_display(recv_pkt->p1_y, recv_pkt->p1_x, recv_pkt->bar_size);
-					recur_recv();
-				}
-			}
-		);
-		*/
 		tcp_socket_.read_some(buffer(recv_pkt, sizeof(pkt_t)));
 		refresh_display(recv_pkt->p1_y, recv_pkt->p1_x, recv_pkt->bar_size);
 		recur_recv();
@@ -125,26 +105,6 @@ public:
 	recur_send ()
 	{
 		key_in = (uint8_t)wgetch(win);
-
-		/*
-		auto self(shared_from_this());
-		async_write(
-			tcp_socket_,
-			buffer(&key_in, sizeof(key_in)),
-			[this, self](boost::system::error_code ec, size_t transferred_bytes)
-			{
-				if (ec)
-				{
-					return fail(ec, "async_read: recv data");
-				}
-				else
-				{
-					recur_send();
-				}
-			}
-		);
-		*/
-
 		tcp_socket_.write_some(buffer(&key_in, sizeof(key_in)));
 		recur_send();
 	}
@@ -227,34 +187,6 @@ private:
 	void
 	init_game ()
 	{
-		/*
-		auto self(shared_from_this());
-		async_read(
-			tcp_socket_,
-			buffer(recv_pkt, sizeof(pkt_t)),
-			[this, self](boost::system::error_code ec, size_t transferred_bytes)
-			{
-				if (ec)
-				{
-					return fail(ec, "async_read: recv fin");
-				}
-				else
-				{
-					// initiate screen
-					init_display();
-					
-					pthread_t recv_thread;
-					pthread_t send_thread;
-
-					pthread_create(&recv_thread, 0x0, recv_handler, this);
-					pthread_create(&send_thread, 0x0, send_handler, this);
-
-					pthread_join(recv_thread, NULL);
-					pthread_join(send_thread, NULL);
-				}
-			}
-		);
-		*/
 		tcp_socket_.read_some(buffer(recv_pkt, sizeof(pkt_t)));
 
 		// initiate screen
@@ -321,9 +253,7 @@ main (int argc, char* argv[])
     auto my_session = make_shared<Session>(io_context, host, port);
 		my_session->run();
 
-    // thread pBar_thread([time]() { bar_handler(time); });
     io_context.run();
-    // pBar_thread.join();
   }
   catch (exception& e)
   {
