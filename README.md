@@ -8,7 +8,7 @@
 ## Directory Structure
 * ```./src/``` contains all the source code file for both client and server.
 
-## Dependencies
+## Dependency
 * [Ncurses](https://invisible-island.net/ncurses/)
 * [Boost.Asio](https://www.boost.org/doc/libs/1_82_0/doc/html/boost_asio.html)
 

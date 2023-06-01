@@ -97,7 +97,7 @@ public:
 	{
 		memset(recv_pkt, 0, sizeof(pkt_t));
 		tcp_socket_.read_some(buffer(recv_pkt, sizeof(pkt_t)));
-		refresh_display(recv_pkt->p1_y, recv_pkt->p1_x, recv_pkt->bar_size);
+		refresh_display(recv_pkt->p1_y, recv_pkt->p1_x, recv_pkt->p2_y, recv_pkt->p2_x, recv_pkt->bar_size);
 		recur_recv();
 	}
 
@@ -111,7 +111,7 @@ public:
 
 private:
 	void
-	refresh_display (int p1_y, int p1_x, int size)
+	refresh_display (int p1_y, int p1_x, int p2_y, int p2_x, int size)
 	{
 		wclear(win);
 		box(win, 0, 0);
@@ -120,8 +120,7 @@ private:
 		// draw p1
 		display_player(p1_y, p1_x, size);
 		// draw p2
-		display_player(p1_y, p1_x, size);
-		// display_player(recv_pkt->p2_y, recv_pkt->p2_x, recv_pkt->bar_size);
+		display_player(p2_y, p2_x, size);
 
 		wrefresh(win);
 	}
@@ -215,7 +214,7 @@ private:
 		box(win, 0, 0);
 		refresh();
 		wrefresh(win);
-		refresh_display(recv_pkt->p1_y, recv_pkt->p1_x, recv_pkt->bar_size);
+		refresh_display(recv_pkt->p1_y, recv_pkt->p1_x, recv_pkt->p2_y, recv_pkt->p2_x, recv_pkt->bar_size);
 	}
 };
 

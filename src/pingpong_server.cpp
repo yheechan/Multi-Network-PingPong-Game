@@ -15,6 +15,7 @@
 #include <boost/asio.hpp>
 #include <chrono>
 #include <thread>
+#include <vector>
 
 using namespace boost::asio;
 using namespace boost::asio::ip;
@@ -29,7 +30,8 @@ fail (boost::system::error_code ec, char const* what)
 }
 
 void* send_handler(void* session_ptr);
-void* recv_handler(void* session_ptr);
+void* p1_recv_handler(void* session_ptr);
+void* p2_recv_handler(void* session_ptr);
 
 typedef struct
 {
@@ -58,20 +60,23 @@ class Session
   : public enable_shared_from_this<Session>
 {
 
-  tcp::socket socket_;
+  tcp::socket p1_socket_;
+  tcp::socket p2_socket_;
 
 	pkt_t *send_pkt;
 
-	uint8_t key_in;
+	uint8_t p1_key_in;
+	uint8_t p2_key_in;
 	
 	pthread_mutex_t mutex_pkt;
 
 public:
-  Session(tcp::socket socket)
-    : socket_(move(socket))
+  Session(tcp::socket socket1, tcp::socket socket2)
+    : p1_socket_(move(socket1))
+    , p2_socket_(move(socket2))
   {
 		// init mutex
-		pthread_mutex_init(&mutex_pkt, NULL);
+		// pthread_mutex_init(&mutex_pkt, NULL);
 
 		// set inital window and position
 		send_pkt = (pkt_t *)malloc(sizeof(pkt_t));
@@ -100,57 +105,89 @@ public:
   void start()
   {
 		pthread_t send_thread;
-		pthread_t recv_thread;
+		pthread_t p1_recv_thread;
+		pthread_t p2_recv_thread;
 
 		pthread_create(&send_thread, 0x0, send_handler, this);
-		pthread_create(&recv_thread, 0x0, recv_handler, this);
+		pthread_create(&p1_recv_thread, 0x0, p1_recv_handler, this);
+		pthread_create(&p2_recv_thread, 0x0, p2_recv_handler, this);
 
 		pthread_join(send_thread, NULL);
-		pthread_join(recv_thread, NULL);
+		pthread_join(p1_recv_thread, NULL);
+		pthread_join(p2_recv_thread, NULL);
   }
 
 	void
 	recur_send ()
 	{
-		socket_.write_some(buffer(send_pkt, sizeof(pkt_t)));
-		cout << "send recur: ";
+		p1_socket_.write_some(buffer(send_pkt, sizeof(pkt_t)));
+		p2_socket_.write_some(buffer(send_pkt, sizeof(pkt_t)));
+
+		cout << "send recur p1: ";
 		cout << send_pkt->p1_y << endl;
+		cout << "send recur p2: ";
+		cout << send_pkt->p2_y << endl;
+
 		this_thread::sleep_for(std::chrono::milliseconds(100));
+
 		recur_send();
 	}
 
 	void
-	recur_recv ()
+	p1_recur_recv ()
 	{
-		socket_.read_some(buffer(&key_in, sizeof(key_in)));
-		cout << static_cast<int>(key_in) << endl;
-		update_pos(key_in);
+		p1_socket_.read_some(buffer(&p1_key_in, sizeof(p1_key_in)));
+		cout << static_cast<int>(p1_key_in) << endl;
+
+		update_pos(p1_key_in, 0);
+
+		p1_recur_recv();
+	}
+
+	void
+	p2_recur_recv ()
+	{
+		p2_socket_.read_some(buffer(&p2_key_in, sizeof(p2_key_in)));
+		cout << static_cast<int>(p2_key_in) << endl;
+
+		update_pos(p2_key_in, 1);
+
+		p2_recur_recv();
 	}
 
  private:
  void
- update_pos (uint8_t key)
+ update_pos (uint8_t key, int player)
  {
  	switch (key)
 	{
 		case 2:
-			mvdown();
+			if (player == 0)
+				p1_mvdown();
+			else
+				p2_mvdown();
 			break;
 		case 3:
-			mvup();
+			if (player == 0)
+				p1_mvup();
+			else
+				p2_mvup();
 			break;
 		default:
 			break;
 	}
 
-	socket_.write_some(buffer(send_pkt, sizeof(pkt_t)));
-	cout << "send update: ";
+	p1_socket_.write_some(buffer(send_pkt, sizeof(pkt_t)));
+	p2_socket_.write_some(buffer(send_pkt, sizeof(pkt_t)));
+
+	cout << "send update p1: ";
 	cout << send_pkt->p1_y << endl;
-	recur_recv();
+	cout << "send update p2: ";
+	cout << send_pkt->p2_y << endl;
  }
 
 	void
-	mvup()
+	p1_mvup()
 	{
 		cout << "up" << endl;
 		send_pkt->p1_y -= 1;
@@ -159,12 +196,30 @@ public:
 	}
 
 	void
-	mvdown()
+	p1_mvdown()
 	{
 		cout << "down" << endl;
 		send_pkt->p1_y += 1;
 		if (send_pkt->p1_y > send_pkt->maxY-2-send_pkt->bar_size+1)
 			send_pkt->p1_y = send_pkt->maxY-2-send_pkt->bar_size+1;
+	}
+
+	void
+	p2_mvup()
+	{
+		cout << "up" << endl;
+		send_pkt->p2_y -= 1;
+		if (send_pkt->p2_y < 1)
+			send_pkt->p2_y = 1;
+	}
+
+	void
+	p2_mvdown()
+	{
+		cout << "down" << endl;
+		send_pkt->p2_y += 1;
+		if (send_pkt->p2_y > send_pkt->maxY-2-send_pkt->bar_size+1)
+			send_pkt->p2_y = send_pkt->maxY-2-send_pkt->bar_size+1;
 	}
 
 };
@@ -177,9 +232,16 @@ send_handler(void* session_ptr) {
 }
 
 void*
-recv_handler(void* session_ptr) {
+p1_recv_handler(void* session_ptr) {
 	Session* session = static_cast<Session*>(session_ptr);
-	session->recur_recv();
+	session->p1_recur_recv();
+	return nullptr;
+}
+
+void*
+p2_recv_handler(void* session_ptr) {
+	Session* session = static_cast<Session*>(session_ptr);
+	session->p2_recur_recv();
 	return nullptr;
 }
 
@@ -187,6 +249,7 @@ recv_handler(void* session_ptr) {
 class tcp_server
 {
   tcp::acceptor acceptor_;
+	// vector<tcp::socket> clients;
 
 public:
   tcp_server(io_context& io_context, short port)
@@ -198,6 +261,7 @@ public:
 private:
   void do_accept()
   {
+		/*
     acceptor_.async_accept(
         [this](boost::system::error_code ec, tcp::socket socket)
         {
@@ -210,10 +274,21 @@ private:
             cout << "Accepted a client" << endl;
             make_shared<Session>(std::move(socket))->start();
           }
-
           do_accept();
         });
+		*/
+
+		tcp::socket socket1(acceptor_.get_executor());
+		acceptor_.accept(socket1);
+		cout << "Accepted client 1" << endl;
+
+		tcp::socket socket2(acceptor_.get_executor());
+		acceptor_.accept(socket2);
+		cout << "Accepted client 2" << endl;
+
+		make_shared<Session>(std::move(socket1), std::move(socket2))->start();
   }
+
 };
 
 
