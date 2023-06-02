@@ -44,6 +44,8 @@ typedef struct
 
 	int ball_y;
 	int ball_x;
+	int ball_y_dir;
+	int ball_x_dir;
 
 	int p1_y;
 	int p1_x;
@@ -54,6 +56,10 @@ typedef struct
 	int p2_dir;
 
 	int bar_size;
+
+	int game_over;
+
+	int power;
 } pkt_t;
 
 class Session
@@ -90,6 +96,8 @@ public:
 
 		send_pkt->ball_y = send_pkt->maxY/3;
 		send_pkt->ball_x = send_pkt->maxX/2;
+		send_pkt->ball_y_dir = 1;
+		send_pkt->ball_x_dir = 1;
 
 		send_pkt->p1_y = 1;
 		send_pkt->p1_x = 1;
@@ -100,6 +108,10 @@ public:
 		send_pkt->p2_dir = -1;
 
 		send_pkt->bar_size = 8;
+
+		send_pkt->game_over = 0;
+
+		send_pkt->power = 1;
   }
 
   void start()
@@ -120,6 +132,9 @@ public:
 	void
 	recur_send ()
 	{
+		// update ball position
+		update_ball();
+
 		p1_socket_.write_some(buffer(send_pkt, sizeof(pkt_t)));
 		p2_socket_.write_some(buffer(send_pkt, sizeof(pkt_t)));
 
@@ -127,6 +142,8 @@ public:
 		cout << send_pkt->p1_y << endl;
 		cout << "send recur p2: ";
 		cout << send_pkt->p2_y << endl;
+		cout << "send recur ball: ";
+		cout << send_pkt->ball_y << " " << send_pkt->ball_x << endl;
 
 		this_thread::sleep_for(std::chrono::milliseconds(100));
 
@@ -155,7 +172,59 @@ public:
 		p2_recur_recv();
 	}
 
- private:
+private:
+
+ void
+ update_ball ()
+ {
+ 	send_pkt->ball_y += (1 * send_pkt->power * send_pkt->ball_y_dir);
+ 	send_pkt->ball_x += (1 * send_pkt->power * send_pkt->ball_x_dir);
+
+	// meet p1 or p2
+	if (
+			( send_pkt->ball_x <= 1
+				&& send_pkt->ball_y >= send_pkt->p1_y
+				&& send_pkt->ball_y <= send_pkt->p1_y + send_pkt->bar_size)
+			||
+			(	send_pkt->ball_x >= 78
+				&& send_pkt->ball_y >= send_pkt->p2_y
+				&& send_pkt->ball_y <= send_pkt->p2_y + send_pkt->bar_size))
+	{
+		// if met on edge
+		if ( send_pkt->ball_y <= send_pkt->p2_y+1
+				|| send_pkt->ball_y >= send_pkt->p2_y + send_pkt->bar_size - 2)
+			send_pkt->power = 2;
+
+		// else met not on edge
+		else
+			send_pkt->power = 1;
+
+		send_pkt->ball_x_dir *= -1;
+		send_pkt->ball_x += (2 * send_pkt->power * send_pkt->ball_x_dir);
+	}
+
+	// meet ceiling or floor
+	else if (send_pkt->ball_y < 1
+					|| send_pkt->ball_y > send_pkt->maxY-2)
+	{
+		send_pkt->ball_y_dir *= -1;
+		send_pkt->ball_y += (2 * send_pkt->power * send_pkt->ball_y_dir);
+	}
+
+
+	// meet left wall
+	else if (send_pkt->ball_x < 1)
+	{
+		send_pkt->game_over = 2;
+	}
+
+	// meet right wall
+	else if (send_pkt->ball_x > send_pkt->maxX-2)
+	{
+		send_pkt->game_over = 1;
+	}
+ }
+
  void
  update_pos (uint8_t key, int player)
  {
@@ -184,6 +253,8 @@ public:
 	cout << send_pkt->p1_y << endl;
 	cout << "send update p2: ";
 	cout << send_pkt->p2_y << endl;
+	cout << "send update ball: ";
+	cout << send_pkt->ball_y << " " << send_pkt->ball_x << endl;
  }
 
 	void
@@ -261,23 +332,6 @@ public:
 private:
   void do_accept()
   {
-		/*
-    acceptor_.async_accept(
-        [this](boost::system::error_code ec, tcp::socket socket)
-        {
-          if (ec)
-          {
-            return fail(ec, "accept");
-          }
-          else
-          {
-            cout << "Accepted a client" << endl;
-            make_shared<Session>(std::move(socket))->start();
-          }
-          do_accept();
-        });
-		*/
-
 		tcp::socket socket1(acceptor_.get_executor());
 		acceptor_.accept(socket1);
 		cout << "Accepted client 1" << endl;

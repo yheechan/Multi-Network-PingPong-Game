@@ -17,6 +17,7 @@ server: $(SERVER_OBJECTS)
 	mv server ./bin/
 
 clean:
+	rm -f $(CLIENT_OBJECTS) $(SERVER_OBJECTS)
 	rm -rf ./bin/
 
 .PHONY: all clean

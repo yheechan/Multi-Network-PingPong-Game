@@ -46,6 +46,8 @@ typedef struct
 
 	int ball_y;
 	int ball_x;
+	int ball_y_dir;
+	int ball_x_dir;
 
 	int p1_y;
 	int p1_x;
@@ -56,6 +58,10 @@ typedef struct
 	int p2_dir;
 
 	int bar_size;
+
+	int game_over;
+
+	int power;
 } pkt_t;
 
 class Session
@@ -97,8 +103,17 @@ public:
 	{
 		memset(recv_pkt, 0, sizeof(pkt_t));
 		tcp_socket_.read_some(buffer(recv_pkt, sizeof(pkt_t)));
-		refresh_display(recv_pkt->p1_y, recv_pkt->p1_x, recv_pkt->p2_y, recv_pkt->p2_x, recv_pkt->bar_size);
-		recur_recv();
+		if (recv_pkt->game_over != 0)
+		{
+			end_game(recv_pkt->game_over);
+			tcp_socket_.close();
+		}
+
+		else
+		{
+			refresh_display(recv_pkt->p1_y, recv_pkt->p1_x, recv_pkt->p2_y, recv_pkt->p2_x, recv_pkt->bar_size, recv_pkt->ball_y, recv_pkt->ball_x);
+			recur_recv();
+		}
 	}
 
 	void
@@ -111,18 +126,39 @@ public:
 
 private:
 	void
-	refresh_display (int p1_y, int p1_x, int p2_y, int p2_x, int size)
+	end_game (int winner)
 	{
 		wclear(win);
 		box(win, 0, 0);
+
+		mvwprintw(win, recv_pkt->maxY/2, recv_pkt->maxX/2, "Game Over!");
+		mvwprintw(win, (recv_pkt->maxY/2)+1, recv_pkt->maxX/2, "Winner: Client #%d", winner);
+
+		wrefresh(win);
+	}
+
+	void
+	refresh_display (int p1_y, int p1_x, int p2_y, int p2_x, int size, int ball_y, int ball_x)
+	{
+		wclear(win);
+		box(win, 0, 0);
+
 		// draw ball
+		display_ball(ball_y, ball_x);
 
 		// draw p1
 		display_player(p1_y, p1_x, size);
+
 		// draw p2
 		display_player(p2_y, p2_x, size);
 
 		wrefresh(win);
+	}
+
+	void
+	display_ball (int y, int x)
+	{
+		mvwaddch(win, y, x, 'x');
 	}
 
 	void
@@ -214,7 +250,7 @@ private:
 		box(win, 0, 0);
 		refresh();
 		wrefresh(win);
-		refresh_display(recv_pkt->p1_y, recv_pkt->p1_x, recv_pkt->p2_y, recv_pkt->p2_x, recv_pkt->bar_size);
+		refresh_display(recv_pkt->p1_y, recv_pkt->p1_x, recv_pkt->p2_y, recv_pkt->p2_x, recv_pkt->bar_size, recv_pkt->ball_y, recv_pkt->ball_x);
 	}
 };
 
@@ -248,7 +284,6 @@ main (int argc, char* argv[])
 
     io_context io_context;
 
-    // vector<shared_ptr<session>> sessions;
     auto my_session = make_shared<Session>(io_context, host, port);
 		my_session->run();
 
