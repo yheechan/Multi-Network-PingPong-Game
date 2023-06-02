@@ -320,7 +320,6 @@ p2_recv_handler(void* session_ptr) {
 class tcp_server
 {
   tcp::acceptor acceptor_;
-	// vector<tcp::socket> clients;
 
 public:
   tcp_server(io_context& io_context, short port)

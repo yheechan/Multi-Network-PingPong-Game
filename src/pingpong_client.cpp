@@ -275,7 +275,7 @@ main (int argc, char* argv[])
   {
     if (argc != 3)
     {
-      cerr << "Usage: perf_client <host> <port> <time>\n";
+      cerr << "Usage: perf_client <host> <port>\n";
       return 1;
     }
 
