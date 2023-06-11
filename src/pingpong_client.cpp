@@ -37,31 +37,33 @@ void* send_handler(void* session_ptr);
 
 typedef struct
 {
-	int box_height;
-	int box_width;
-	int box_start_y;
-	int box_start_x;
-	int maxY;
-	int maxX;
+	unsigned short box_height : 7;
+	unsigned short box_width : 7;
+	unsigned short box_start_y : 4;
+	unsigned short box_start_x : 4;
+	unsigned short maxY : 7;
+	unsigned short maxX : 7;
 
-	int ball_y;
-	int ball_x;
-	int ball_y_dir;
-	int ball_x_dir;
+	unsigned short ball_y : 7;
+	unsigned short ball_x : 7;
+	signed short ball_y_dir : 2;
+	signed short ball_x_dir : 2;
 
-	int p1_y;
-	int p1_x;
-	int p1_dir;
+	unsigned short p1_y : 7;
+	unsigned short p1_x : 7;
+	signed short p1_dir : 2;
 
-	int p2_y;
-	int p2_x;
-	int p2_dir;
+	unsigned short p2_y : 7;
+	unsigned short p2_x : 7;
+	signed short p2_dir : 2;
 
-	int bar_size;
+	unsigned short bar_size : 4;
 
-	int game_over;
+	unsigned short game_over : 2;
 
-	int power;
+	unsigned short power : 2;
+
+	unsigned short rally : 8;
 } pkt_t;
 
 class Session
@@ -80,6 +82,12 @@ class Session
 
 	uint8_t key_in;
 
+	/*
+	pthread_cond_t cond;
+	pthread_mutex_t mutex;
+	int signal_recv;
+	*/
+
 public:
   explicit
   Session(io_context& ioc, char const* host, char const* port)
@@ -90,6 +98,12 @@ public:
   {
 		recv_pkt = (pkt_t *)malloc(sizeof(pkt_t));
 		key_in = 1;
+
+		/*
+		pthread_cond_init(&cond, NULL);
+		pthread_mutex_init(&mutex, NULL);
+		signal_recv = 0;
+		*/
   }
 
   void
@@ -103,15 +117,31 @@ public:
 	{
 		memset(recv_pkt, 0, sizeof(pkt_t));
 		tcp_socket_.read_some(buffer(recv_pkt, sizeof(pkt_t)));
+
 		if (recv_pkt->game_over != 0)
 		{
 			end_game(recv_pkt->game_over);
 			tcp_socket_.close();
+
+			/*
+			pthread_mutex_lock(&mutex);
+			while (!signal_recv)
+			{
+				pthread_cond_wait(&cond, &mutex);
+			}
+			signal_recv = 0;
+			pthread_mutex_unlock(&mutex);
+
+			recur_recv();
+			*/
 		}
 
 		else
 		{
-			refresh_display(recv_pkt->p1_y, recv_pkt->p1_x, recv_pkt->p2_y, recv_pkt->p2_x, recv_pkt->bar_size, recv_pkt->ball_y, recv_pkt->ball_x);
+			refresh_display(recv_pkt->p1_y, recv_pkt->p1_x
+											, recv_pkt->p2_y, recv_pkt->p2_x, recv_pkt->bar_size
+											, recv_pkt->ball_y, recv_pkt->ball_x
+											, recv_pkt->rally);
 			recur_recv();
 		}
 	}
@@ -120,7 +150,18 @@ public:
 	recur_send ()
 	{
 		key_in = (uint8_t)wgetch(win);
-		tcp_socket_.write_some(buffer(&key_in, sizeof(key_in)));
+
+		/*
+		if (key_in == 114)
+		{
+			pthread_mutex_lock(&mutex);
+			signal_recv = 1;
+			pthread_cond_signal(&cond);
+			pthread_mutex_unlock(&mutex);
+		}
+		*/
+
+		write(tcp_socket_, buffer(&key_in, sizeof(key_in)));
 		recur_send();
 	}
 
@@ -131,14 +172,18 @@ private:
 		wclear(win);
 		box(win, 0, 0);
 
-		mvwprintw(win, recv_pkt->maxY/2, recv_pkt->maxX/2, "Game Over!");
-		mvwprintw(win, (recv_pkt->maxY/2)+1, recv_pkt->maxX/2, "Winner: Client #%d", winner);
+		mvwprintw(win, recv_pkt->maxY/2, (recv_pkt->maxX/2)-5, "Game Over!");
+		mvwprintw(win, (recv_pkt->maxY/2)+1, (recv_pkt->maxX/2)-5, "Winner: Client #%d", winner);
+		// mvwprintw(win, (recv_pkt->maxY/2)+2, (recv_pkt->maxX/2)-5, "Press r to replay.");
 
 		wrefresh(win);
 	}
 
 	void
-	refresh_display (int p1_y, int p1_x, int p2_y, int p2_x, int size, int ball_y, int ball_x)
+	refresh_display (int p1_y, int p1_x
+										, int p2_y, int p2_x, int size
+										, int ball_y, int ball_x
+										, int rally)
 	{
 		wclear(win);
 		box(win, 0, 0);
@@ -152,7 +197,16 @@ private:
 		// draw p2
 		display_player(p2_y, p2_x, size);
 
+		// draw information stats
+		display_stats(rally);
+
 		wrefresh(win);
+	}
+
+	void
+	display_stats (int rally)
+	{
+		mvwprintw(win, 0, (recv_pkt->maxX/2)-5, "RALLY: %d", rally);
 	}
 
 	void
@@ -222,7 +276,7 @@ private:
 	void
 	init_game ()
 	{
-		tcp_socket_.read_some(buffer(recv_pkt, sizeof(pkt_t)));
+		read(tcp_socket_, buffer(recv_pkt, sizeof(pkt_t)));
 
 		// initiate screen
 		init_display();
@@ -235,6 +289,11 @@ private:
 
 		pthread_join(recv_thread, NULL);
 		pthread_join(send_thread, NULL);
+
+		/*
+		pthread_cond_destroy(&cond);
+		pthread_mutex_destroy(&mutex);
+		*/
 	}
 
 	void
@@ -250,7 +309,10 @@ private:
 		box(win, 0, 0);
 		refresh();
 		wrefresh(win);
-		refresh_display(recv_pkt->p1_y, recv_pkt->p1_x, recv_pkt->p2_y, recv_pkt->p2_x, recv_pkt->bar_size, recv_pkt->ball_y, recv_pkt->ball_x);
+		refresh_display(recv_pkt->p1_y, recv_pkt->p1_x
+										, recv_pkt->p2_y, recv_pkt->p2_x, recv_pkt->bar_size
+										, recv_pkt->ball_y, recv_pkt->ball_x
+										, recv_pkt->rally);
 	}
 };
 
