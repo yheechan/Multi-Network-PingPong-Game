@@ -37,17 +37,22 @@ void* send_handler(void* session_ptr);
 
 typedef struct
 {
+	unsigned short ball_y : 7;
+	unsigned short ball_x : 7;
+	signed short ball_y_dir : 2;
+	signed short ball_x_dir : 2;
+
+	unsigned short power : 2;
+} ball_t;
+
+typedef struct
+{
 	unsigned short box_height : 7;
 	unsigned short box_width : 7;
 	unsigned short box_start_y : 4;
 	unsigned short box_start_x : 4;
 	unsigned short maxY : 7;
 	unsigned short maxX : 7;
-
-	unsigned short ball_y : 7;
-	unsigned short ball_x : 7;
-	signed short ball_y_dir : 2;
-	signed short ball_x_dir : 2;
 
 	unsigned short p1_y : 7;
 	unsigned short p1_x : 7;
@@ -61,9 +66,10 @@ typedef struct
 
 	unsigned short game_over : 2;
 
-	unsigned short power : 2;
-
 	unsigned short rally : 8;
+
+	unsigned short ball_cnt : 2;
+	ball_t balls[3];
 } pkt_t;
 
 class Session
@@ -140,7 +146,7 @@ public:
 		{
 			refresh_display(recv_pkt->p1_y, recv_pkt->p1_x
 											, recv_pkt->p2_y, recv_pkt->p2_x, recv_pkt->bar_size
-											, recv_pkt->ball_y, recv_pkt->ball_x
+											, recv_pkt->ball_cnt, recv_pkt->balls
 											, recv_pkt->rally);
 			recur_recv();
 		}
@@ -182,14 +188,17 @@ private:
 	void
 	refresh_display (int p1_y, int p1_x
 										, int p2_y, int p2_x, int size
-										, int ball_y, int ball_x
+										, int ball_cnt, ball_t *balls
 										, int rally)
 	{
 		wclear(win);
 		box(win, 0, 0);
 
 		// draw ball
-		display_ball(ball_y, ball_x);
+		for (int i=0; i<ball_cnt; i++)
+		{
+			display_ball(balls[i].ball_y, balls[i].ball_x);
+		}
 
 		// draw p1
 		display_player(p1_y, p1_x, size);
@@ -198,15 +207,15 @@ private:
 		display_player(p2_y, p2_x, size);
 
 		// draw information stats
-		display_stats(rally);
+		display_stats(rally, ball_cnt);
 
 		wrefresh(win);
 	}
 
 	void
-	display_stats (int rally)
+	display_stats (int rally, int ball_cnt)
 	{
-		mvwprintw(win, 0, (recv_pkt->maxX/2)-5, "RALLY: %d", rally);
+		mvwprintw(win, 0, (recv_pkt->maxX/2)-10, "RALLY: %d\t LEVEL: %d", rally, ball_cnt);
 	}
 
 	void
@@ -311,7 +320,7 @@ private:
 		wrefresh(win);
 		refresh_display(recv_pkt->p1_y, recv_pkt->p1_x
 										, recv_pkt->p2_y, recv_pkt->p2_x, recv_pkt->bar_size
-										, recv_pkt->ball_y, recv_pkt->ball_x
+										, recv_pkt->ball_cnt, recv_pkt->balls
 										, recv_pkt->rally);
 	}
 };
