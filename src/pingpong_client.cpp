@@ -1,13 +1,3 @@
-//
-// blocking_tcp_echo_client.cpp
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//
-// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
-//
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-//
-
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
@@ -88,12 +78,6 @@ class Session
 
 	uint8_t key_in;
 
-	/*
-	pthread_cond_t cond;
-	pthread_mutex_t mutex;
-	int signal_recv;
-	*/
-
 public:
   explicit
   Session(io_context& ioc, char const* host, char const* port)
@@ -104,12 +88,6 @@ public:
   {
 		recv_pkt = (pkt_t *)malloc(sizeof(pkt_t));
 		key_in = 1;
-
-		/*
-		pthread_cond_init(&cond, NULL);
-		pthread_mutex_init(&mutex, NULL);
-		signal_recv = 0;
-		*/
   }
 
   void
@@ -122,26 +100,43 @@ public:
 	recur_recv ()
 	{
 		memset(recv_pkt, 0, sizeof(pkt_t));
-		read(tcp_socket_, buffer(recv_pkt, sizeof(pkt_t)));
+
+		try
+		{
+			read(tcp_socket_, buffer(recv_pkt, sizeof(pkt_t)));
+		}
+		catch (boost::wrapexcept<boost::system::system_error>& ec)
+		{
+			tcp_socket_.close();
+			cout << "Closing TCP server socket." << endl;
+			cout << "End Game." << endl;
+			while (1){}
+		}
+		
 
 		if (recv_pkt->game_over != 0)
 		{
 			end_game(recv_pkt->game_over);
-			// tcp_socket_.close();
 
-			while (1){}
-
-			/*
-			pthread_mutex_lock(&mutex);
-			while (!signal_recv)
+			while (1)
 			{
-				pthread_cond_wait(&cond, &mutex);
+				try
+				{
+					read(tcp_socket_, buffer(recv_pkt, sizeof(pkt_t)));
+				}
+				catch (boost::wrapexcept<boost::system::system_error>& ec)
+				{
+					tcp_socket_.close();
+					cout << "Closing TCP server socket." << endl;
+					cout << "End Game." << endl;
+					while (1){}
+				}
+
+				if (recv_pkt->game_over == 0)
+					break;
 			}
-			signal_recv = 0;
-			pthread_mutex_unlock(&mutex);
 
 			recur_recv();
-			*/
 		}
 
 		else
@@ -159,17 +154,6 @@ public:
 	{
 		key_in = (uint8_t)wgetch(win);
 
-		/*
-		if (key_in == 114)
-		{
-			pthread_mutex_lock(&mutex);
-			signal_recv = 1;
-			pthread_cond_signal(&cond);
-			pthread_mutex_unlock(&mutex);
-		}
-		*/
-
-		// write(tcp_socket_, buffer(&key_in, sizeof(key_in)));
 		try
 		{
 			write(tcp_socket_, buffer(&key_in, sizeof(key_in)));
@@ -191,7 +175,7 @@ private:
 
 		mvwprintw(win, recv_pkt->maxY/2, (recv_pkt->maxX/2)-5, "Game Over!");
 		mvwprintw(win, (recv_pkt->maxY/2)+1, (recv_pkt->maxX/2)-5, "Winner: Client #%d", winner);
-		// mvwprintw(win, (recv_pkt->maxY/2)+2, (recv_pkt->maxX/2)-5, "Press r to replay.");
+		mvwprintw(win, (recv_pkt->maxY/2)+2, (recv_pkt->maxX/2)-5, "Press r to replay.");
 
 		wrefresh(win);
 	}
@@ -309,11 +293,6 @@ private:
 
 		pthread_join(recv_thread, NULL);
 		pthread_join(send_thread, NULL);
-
-		/*
-		pthread_cond_destroy(&cond);
-		pthread_mutex_destroy(&mutex);
-		*/
 	}
 
 	void

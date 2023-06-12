@@ -1,13 +1,3 @@
-//
-// async_tcp_echo_server.cpp
-// ~~~~~~~~~~~~~~~~~~~~~~~~~
-//
-// Copyright (c) 2003-2021 Christopher M. Kohlhoff (chris at kohlhoff dot com)
-//
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-//
-
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -21,13 +11,6 @@ using namespace boost::asio;
 using namespace boost::asio::ip;
 using namespace std;
 using namespace std::chrono;
-
-// Report a failure
-void
-fail (boost::system::error_code ec, char const* what)
-{
-    std::cerr << what << ": " << ec.message() << "\n";
-}
 
 void* send_handler(void* session_ptr);
 void* p1_recv_handler(void* session_ptr);
@@ -82,41 +65,12 @@ class Session
 	uint8_t p1_key_in;
 	uint8_t p2_key_in;
 
-	/*
-	pthread_cond_t cond;
-	pthread_cond_t p1_cond;
-	pthread_cond_t p2_cond;
-	
-	pthread_mutex_t mutex;
-	pthread_mutex_t p1_mutex;
-	pthread_mutex_t p2_mutex;
-
-	int signal_recv;
-	int p1_signal;
-	int p2_signal;
-	*/
-
 public:
   Session(tcp::socket socket1, tcp::socket socket2)
     : p1_socket_(move(socket1))
     , p2_socket_(move(socket2))
   {
-		/*
-		pthread_cond_init(&cond, NULL);
-		pthread_cond_init(&p1_cond, NULL);
-		pthread_cond_init(&p2_cond, NULL);
-
-		pthread_mutex_init(&mutex, NULL);
-		pthread_mutex_init(&p1_mutex, NULL);
-		pthread_mutex_init(&p2_mutex, NULL);
-
-		signal_recv = 0;
-		p1_signal = 0;
-		p2_signal = 0;
-		*/
-
 		send_pkt = (pkt_t *)malloc(sizeof(pkt_t));
-
 		init_settings();
   }
 
@@ -133,16 +87,6 @@ public:
 		pthread_join(send_thread, NULL);
 		pthread_join(p1_recv_thread, NULL);
 		pthread_join(p2_recv_thread, NULL);
-
-		/*
-		pthread_cond_destroy(&cond);
-		pthread_cond_destroy(&p1_cond);
-		pthread_cond_destroy(&p2_cond);
-
-		pthread_mutex_destroy(&mutex);
-		pthread_mutex_destroy(&p1_mutex);
-		pthread_mutex_destroy(&p2_mutex);
-		*/
   }
 
 	void
@@ -150,9 +94,6 @@ public:
 	{
 		// update ball position
 		update_ball();
-
-		// write(p1_socket_, buffer(send_pkt, sizeof(pkt_t)));
-		// write(p2_socket_, buffer(send_pkt, sizeof(pkt_t)));
 
 		try{
 			write(p1_socket_, buffer(send_pkt, sizeof(pkt_t)));
@@ -166,54 +107,10 @@ public:
 			while (1){}
 		}
 
-		// wait here
-		/*
-		if (send_pkt->game_over != 0)
-		{
-			cout << "main thread at game over" << endl;
-
-			cout << "1 main thread entering while loop on signal" << endl;
-			pthread_mutex_lock(&mutex);
-			while (!signal_recv)
-			{
-				pthread_cond_wait(&cond, &mutex);
-			}
-			signal_recv = 0;
-			pthread_mutex_unlock(&mutex);
-
-
-			cout << "2 main thread entering while loop on signal" << endl;
-			pthread_mutex_lock(&mutex);
-			while (!signal_recv)
-			{
-				pthread_cond_wait(&cond, &mutex);
-			}
-			signal_recv = 0;
-			pthread_mutex_unlock(&mutex);
-
-
-			cout << "main thread change p1_signal" << endl;
-			pthread_mutex_lock(&p1_mutex);
-			p1_signal = 1;
-			pthread_cond_signal(&p1_cond);
-			pthread_mutex_unlock(&p1_mutex);
-
-			cout << "main thread change p2_signal" << endl;
-			pthread_mutex_lock(&p2_mutex);
-			p1_signal = 1;
-			pthread_cond_signal(&p2_cond);
-			pthread_mutex_unlock(&p2_mutex);
-
-			init_settings();
-		}
-		*/
-
 		cout << "send recur p1: ";
 		cout << send_pkt->p1_y << endl;
 		cout << "send recur p2: ";
 		cout << send_pkt->p2_y << endl;
-		// cout << "send recur ball: ";
-		// cout << send_pkt->ball_y << " " << send_pkt->ball_x << endl;
 
 		this_thread::sleep_for(std::chrono::milliseconds(100));
 
@@ -223,9 +120,6 @@ public:
 	void
 	p1_recur_recv ()
 	{
-		// read(p1_socket_, buffer(&p1_key_in, sizeof(p1_key_in)));
-		// cout << static_cast<int>(p1_key_in) << endl;
-
 		try
 		{
 			read(p1_socket_, buffer(&p1_key_in, sizeof(p1_key_in)));
@@ -241,35 +135,11 @@ public:
 			cout << "Closing player 1 client socket." << endl;
 			while (1){}
 		}
-
-		// update_pos(p1_key_in, 0);
-
-		/*
-		if (send_pkt->game_over != 0)
-		{
-			cout << "p1 thread entering while loop on signal" << endl;
-			pthread_mutex_lock(&p1_mutex);
-			while (!p2_signal)
-			{
-				pthread_cond_wait(&p1_cond, &p1_mutex);
-			}
-			p1_signal = 0;
-			pthread_mutex_unlock(&p1_mutex);
-
-			cout << "init from p1" << endl;
-			init_settings();
-		}
-		*/
-
-		// p1_recur_recv();
 	}
 
 	void
 	p2_recur_recv ()
 	{
-		// read(p2_socket_, buffer(&p2_key_in, sizeof(p2_key_in)));
-		// cout << static_cast<int>(p2_key_in) << endl;
-
 		try
 		{
 			read(p2_socket_, buffer(&p2_key_in, sizeof(p2_key_in)));
@@ -285,27 +155,6 @@ public:
 			cout << "Closing player 2 client socket." << endl;
 			while (1){}
 		}
-
-		// update_pos(p2_key_in, 1);
-
-		/*
-		if (send_pkt->game_over != 0)
-		{
-			cout << "p2 thread entering while loop on signal" << endl;
-			pthread_mutex_lock(&p2_mutex);
-			while (!p2_signal)
-			{
-				pthread_cond_wait(&p2_cond, &p2_mutex);
-			}
-			p2_signal = 0;
-			pthread_mutex_unlock(&p2_mutex);
-
-			cout << "init from p2" << endl;
-			init_settings();
-		}
-		*/
-
-		// p2_recur_recv();
 	}
 
 private:
@@ -385,7 +234,7 @@ private:
 				{
 					send_pkt->ball_cnt = 2;
 				}
-				else if (send_pkt->rally == 15)
+				else if (send_pkt->rally == 10)
 				{
 					send_pkt->ball_cnt = 3;
 				}
@@ -432,16 +281,9 @@ private:
 				else
 					p2_mvup();
 				break;
-			/*
 			case 114:
-				cout << "sending signal recv from player ";
-				cout << player << endl;
-				pthread_mutex_lock(&mutex);
-				signal_recv = 1;
-				pthread_cond_signal(&cond);
-				pthread_mutex_unlock(&mutex);
+				init_settings();
 				break;
-			*/
 			default:
 				break;
 		}
@@ -453,8 +295,6 @@ private:
 		cout << send_pkt->p1_y << endl;
 		cout << "send update p2: ";
 		cout << send_pkt->p2_y << endl;
-		// cout << "send update ball: ";
-		// cout << send_pkt->ball_y << " " << send_pkt->ball_x << endl;
 	}
 
 	void
