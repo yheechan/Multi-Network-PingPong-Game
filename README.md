@@ -1,6 +1,6 @@
 # Multi-Network-PingPong-Game
 
-<img src=docs/pingpong.gif width=500px>
+<img src=docs/pingpong-1.gif width=500px>
 
 ## This is a multiplayer ping pong game over multi-network built with basic networking API using [Boost.Asio](https://www.boost.org/doc/libs/1_82_0/doc/html/boost_asio.html).
 * Server manages all existing objects' (player 1, player 2, balls) position throughout the game.
