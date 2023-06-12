@@ -122,12 +122,14 @@ public:
 	recur_recv ()
 	{
 		memset(recv_pkt, 0, sizeof(pkt_t));
-		tcp_socket_.read_some(buffer(recv_pkt, sizeof(pkt_t)));
+		read(tcp_socket_, buffer(recv_pkt, sizeof(pkt_t)));
 
 		if (recv_pkt->game_over != 0)
 		{
 			end_game(recv_pkt->game_over);
-			tcp_socket_.close();
+			// tcp_socket_.close();
+
+			while (1){}
 
 			/*
 			pthread_mutex_lock(&mutex);
@@ -167,8 +169,17 @@ public:
 		}
 		*/
 
-		write(tcp_socket_, buffer(&key_in, sizeof(key_in)));
-		recur_send();
+		// write(tcp_socket_, buffer(&key_in, sizeof(key_in)));
+		try
+		{
+			write(tcp_socket_, buffer(&key_in, sizeof(key_in)));
+			recur_send();
+		}
+		catch (boost::wrapexcept<boost::system::system_error>& ec)
+		{
+			tcp_socket_.close();
+			while (1){}
+		}
 	}
 
 private:

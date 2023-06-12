@@ -151,8 +151,20 @@ public:
 		// update ball position
 		update_ball();
 
-		write(p1_socket_, buffer(send_pkt, sizeof(pkt_t)));
-		write(p2_socket_, buffer(send_pkt, sizeof(pkt_t)));
+		// write(p1_socket_, buffer(send_pkt, sizeof(pkt_t)));
+		// write(p2_socket_, buffer(send_pkt, sizeof(pkt_t)));
+
+		try{
+			write(p1_socket_, buffer(send_pkt, sizeof(pkt_t)));
+			write(p2_socket_, buffer(send_pkt, sizeof(pkt_t)));
+		}
+		catch (boost::wrapexcept<boost::system::system_error>& ec)
+		{
+			p1_socket_.close();
+			p2_socket_.close();
+			cout << "End Game." << endl;
+			while (1){}
+		}
 
 		// wait here
 		/*
@@ -211,10 +223,26 @@ public:
 	void
 	p1_recur_recv ()
 	{
-		read(p1_socket_, buffer(&p1_key_in, sizeof(p1_key_in)));
-		cout << static_cast<int>(p1_key_in) << endl;
+		// read(p1_socket_, buffer(&p1_key_in, sizeof(p1_key_in)));
+		// cout << static_cast<int>(p1_key_in) << endl;
 
-		update_pos(p1_key_in, 0);
+		try
+		{
+			read(p1_socket_, buffer(&p1_key_in, sizeof(p1_key_in)));
+			cout << static_cast<int>(p1_key_in) << endl;
+
+			update_pos(p1_key_in, 0);
+			p1_recur_recv();
+		}
+		catch (const boost::wrapexcept<boost::system::system_error>& ec)
+		{
+			p1_socket_.close();
+			cout << "Player 1 exitted the game." << endl;
+			cout << "Closing player 1 client socket." << endl;
+			while (1){}
+		}
+
+		// update_pos(p1_key_in, 0);
 
 		/*
 		if (send_pkt->game_over != 0)
@@ -233,16 +261,32 @@ public:
 		}
 		*/
 
-		p1_recur_recv();
+		// p1_recur_recv();
 	}
 
 	void
 	p2_recur_recv ()
 	{
-		read(p2_socket_, buffer(&p2_key_in, sizeof(p2_key_in)));
-		cout << static_cast<int>(p2_key_in) << endl;
+		// read(p2_socket_, buffer(&p2_key_in, sizeof(p2_key_in)));
+		// cout << static_cast<int>(p2_key_in) << endl;
 
-		update_pos(p2_key_in, 1);
+		try
+		{
+			read(p2_socket_, buffer(&p2_key_in, sizeof(p2_key_in)));
+			cout << static_cast<int>(p2_key_in) << endl;
+
+			update_pos(p2_key_in, 1);
+			p2_recur_recv();
+		}
+		catch (const boost::wrapexcept<boost::system::system_error>& ec)
+		{
+			p2_socket_.close();
+			cout << "Player 2 exitted the game." << endl;
+			cout << "Closing player 2 client socket." << endl;
+			while (1){}
+		}
+
+		// update_pos(p2_key_in, 1);
 
 		/*
 		if (send_pkt->game_over != 0)
@@ -261,7 +305,7 @@ public:
 		}
 		*/
 
-		p2_recur_recv();
+		// p2_recur_recv();
 	}
 
 private:
