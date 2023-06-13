@@ -37,11 +37,9 @@ typedef struct
 
 	unsigned short p1_y : 7;
 	unsigned short p1_x : 7;
-	signed short p1_dir : 2;
 
 	unsigned short p2_y : 7;
 	unsigned short p2_x : 7;
-	signed short p2_dir : 2;
 
 	unsigned short bar_size : 4;
 
@@ -173,11 +171,9 @@ private:
 
 		send_pkt->p1_y = 1;
 		send_pkt->p1_x = 1;
-		send_pkt->p1_dir = -1;
 
 		send_pkt->p2_y = 1;
 		send_pkt->p2_x = 78;
-		send_pkt->p2_dir = -1;
 
 		send_pkt->bar_size = 8;
 
@@ -374,6 +370,8 @@ private:
 		tcp::socket socket1(acceptor_.get_executor());
 		acceptor_.accept(socket1);
 		cout << "Accepted client 1" << endl;
+
+		cout << "Waiting for second client" << endl;
 
 		tcp::socket socket2(acceptor_.get_executor());
 		acceptor_.accept(socket2);

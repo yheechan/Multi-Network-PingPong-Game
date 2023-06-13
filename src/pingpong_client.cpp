@@ -46,11 +46,9 @@ typedef struct
 
 	unsigned short p1_y : 7;
 	unsigned short p1_x : 7;
-	signed short p1_dir : 2;
 
 	unsigned short p2_y : 7;
 	unsigned short p2_x : 7;
-	signed short p2_dir : 2;
 
 	unsigned short bar_size : 4;
 

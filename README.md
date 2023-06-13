@@ -1,8 +1,8 @@
-# Multi-Network-PingPong-Game
+# NMPG: Network-Based-Multiplayer-PingPong-Game
 
 <img src=docs/pingpong-1.gif width=500px>
 
-## This is a multiplayer ping pong game over multi-network built with basic networking API using [Boost.Asio](https://www.boost.org/doc/libs/1_82_0/doc/html/boost_asio.html).
+## This is a multiplayer ping pong game over network built with basic networking API using [Boost.Asio](https://www.boost.org/doc/libs/1_82_0/doc/html/boost_asio.html).
 * Server manages all existing objects' (player 1, player 2, balls) position throughout the game.
 * On client's request (keyboard press) server acts and updates the objects position.
 * Every 0.1 seconds, the position of the ball is updated.
@@ -11,8 +11,8 @@
 ## Game Play
 * There are 3 levels: each level indicating the number of balls
 	* level 1: RALLY < 5
-	* level 2: 5 < RALLY < 15
-	* level 3: 15 < RALLY 
+	* level 2: 5 <= RALLY < 10
+	* level 3: 10 <= RALLY 
 * When the ball hits the middle of the player's bar, the power of the ball become 1.
 * When ball hits the edge of the player's bar, the power of the ball becomes 2.
 
@@ -22,7 +22,7 @@
 ## Dependency
 * [Boost.Asio](https://www.boost.org/doc/libs/1_82_0/doc/html/boost_asio.html)
 	* Installation command: ```$ sudo apt-get install libboost-all-dev```
-* [Ncurses](https://invisible-island.net/ncurses/)
+* [Ncurses](https://tldp.org/HOWTO/NCURSES-Programming-HOWTO/index.html)
 	* Installation command: ```$ sudo apt-get install libncurses5-dev libncursesw5-dev```
 
 ## Command Sequence: Steps to build and run the program.
